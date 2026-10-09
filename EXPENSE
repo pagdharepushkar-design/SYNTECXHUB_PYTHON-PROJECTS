@@ -1,0 +1,190 @@
+
+import csv
+from datetime import datetime
+import os
+
+FILE_NAME = "transactions.csv"
+
+
+# Create the CSV file if it does not exist
+def create_file():
+    if not os.path.exists(FILE_NAME):
+        with open(FILE_NAME, "w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(["Date", "Type", "Category", "Amount"])
+
+
+# Add income or expense
+def add_transaction(transaction_type):
+    date = input("Enter date (YYYY-MM-DD) or press Enter for today: ")
+
+    if date == "":
+        date = datetime.today().strftime("%Y-%m-%d")
+    else:
+        try:
+            datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            print("Invalid date! Please use YYYY-MM-DD.")
+            return
+
+    category = input("Enter category: ").strip()
+
+    if category == "":
+        print("Category cannot be empty!")
+        return
+
+    try:
+        amount = float(input("Enter amount: "))
+
+        if amount <= 0:
+            print("Amount must be greater than zero!")
+            return
+
+    except ValueError:
+        print("Please enter a valid amount!")
+        return
+
+    with open(FILE_NAME, "a", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow([date, transaction_type, category, amount])
+
+    print(transaction_type, "added successfully!")
+
+
+# Display all transactions
+def view_transactions():
+    with open(FILE_NAME, "r", newline="") as file:
+        reader = csv.DictReader(file)
+        transactions = list(reader)
+
+    if len(transactions) == 0:
+        print("No transactions found.")
+        return
+
+    print("\n========== ALL TRANSACTIONS ==========")
+    print(f"{'Date':<12} {'Type':<10} {'Category':<15} {'Amount':>10}")
+    print("-" * 50)
+
+    for transaction in transactions:
+        print(
+            f"{transaction['Date']:<12} "
+            f"{transaction['Type']:<10} "
+            f"{transaction['Category']:<15} "
+            f"{float(transaction['Amount']):>10.2f}"
+        )
+
+
+# Display a summary for a particular month
+def monthly_summary():
+    month = input("Enter month (YYYY-MM): ")
+
+    try:
+        datetime.strptime(month, "%Y-%m")
+    except ValueError:
+        print("Invalid month! Please use YYYY-MM.")
+        return
+
+    total_income = 0
+    total_expenses = 0
+    category_expenses = {}
+
+    with open(FILE_NAME, "r", newline="") as file:
+        reader = csv.DictReader(file)
+
+        for transaction in reader:
+            if transaction["Date"].startswith(month):
+
+                amount = float(transaction["Amount"])
+
+                if transaction["Type"] == "Income":
+                    total_income += amount
+
+                elif transaction["Type"] == "Expense":
+                    total_expenses += amount
+
+                    category = transaction["Category"]
+
+                    if category in category_expenses:
+                        category_expenses[category] += amount
+                    else:
+                        category_expenses[category] = amount
+
+    balance = total_income - total_expenses
+
+    print("\n========== MONTHLY SUMMARY ==========")
+    print("Month:", month)
+    print(f"Total Income:   {total_income:.2f}")
+    print(f"Total Expenses: {total_expenses:.2f}")
+    print(f"Remaining Balance: {balance:.2f}")
+
+    if category_expenses:
+        print("\nExpenses by Category:")
+
+        for category, amount in category_expenses.items():
+            print(f"{category}: {amount:.2f}")
+    else:
+        print("\nNo expenses recorded for this month.")
+
+
+# Export transactions to another CSV file
+def export_transactions():
+    export_file = input(
+        "Enter export filename (default: exported_transactions.csv): "
+    ).strip()
+
+    if export_file == "":
+        export_file = "exported_transactions.csv"
+
+    if not export_file.lower().endswith(".csv"):
+        export_file += ".csv"
+
+    with open(FILE_NAME, "r", newline="") as source_file:
+        reader = csv.reader(source_file)
+        transactions = list(reader)
+
+    with open(export_file, "w", newline="") as output_file:
+        writer = csv.writer(output_file)
+        writer.writerows(transactions)
+
+    print("Transactions exported successfully to", export_file)
+
+
+# Main menu
+def main():
+    create_file()
+
+    while True:
+        print("\n========== EXPENSE TRACKER ==========")
+        print("1. Add Income")
+        print("2. Add Expense")
+        print("3. View Transactions")
+        print("4. Monthly Summary")
+        print("5. Export Transactions")
+        print("6. Exit")
+
+        choice = input("Enter your choice: ")
+
+        if choice == "1":
+            add_transaction("Income")
+
+        elif choice == "2":
+            add_transaction("Expense")
+
+        elif choice == "3":
+            view_transactions()
+
+        elif choice == "4":
+            monthly_summary()
+
+        elif choice == "5":
+            export_transactions()
+
+        elif choice == "6":
+            print("Thank you for using Expense Tracker!")
+            break
+
+        else:
+            print("Invalid choice! Please select 1 to 6.")
+
+
+main()
